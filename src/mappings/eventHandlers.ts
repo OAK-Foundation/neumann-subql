@@ -81,12 +81,17 @@ async function findOrCreateBlock(substrateBlock: SubstrateBlock): Promise<String
   let blockWeight = new BN(0);
   events.forEach((event) => {
     const { event: { method, section, data } } = event;
-    const weight = section === 'system' && ['ExtrinsicFailed', 'ExtrinsicSuccess'].includes(method) ? ((method === 'ExtrinsicSuccess' ? data[0] : data[1]) as DispatchInfo).weight : new BN(0);
+    let weight = new BN(0);
+    if (section === 'system' && ['ExtrinsicFailed', 'ExtrinsicSuccess'].includes(method)) {
+      weight = ((method === 'ExtrinsicSuccess' ? data[0] : data[1]) as DispatchInfo).weight;
+    }
     blockWeight.iadd(weight);
   })
 
   const blockAttributes = {
-    id, specVersion, timestamp,
+    id,
+    specVersion,
+    timestamp,
     hash: blockHash.toString(),
     height: blockHeight.toBigInt(),
     weight: BigInt(blockWeight.toNumber()),
