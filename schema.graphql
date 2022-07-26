@@ -147,5 +147,6 @@ type Block @entity {
   height: BigInt!
   specVersion: Int!
   timestamp: Date!
+  weight: BigInt!
   events: [Event] @derivedFrom(field:"block")
 }
