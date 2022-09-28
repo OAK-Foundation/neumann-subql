@@ -10,7 +10,6 @@ network:
   genesisHash: '0x0f62b701fb12d02237a33b84818c11f621653d2b1614c777973babf4652b535d'
   chaintypes:
     file: ./dist/chaintypes.js
-  dictionary: https://api.subquery.network/sq/OAK-Foundation/turing-network
 dataSources:
   - kind: substrate/Runtime
     startBlock: 1
