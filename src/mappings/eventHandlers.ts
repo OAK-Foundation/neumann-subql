@@ -29,7 +29,7 @@ export async function handleEvent(substrateEvent: SubstrateEvent): Promise<void>
     module: event.section,
     method: event.method,
     data: event.data.toHuman(),
-    docs: event.meta.docs.join(" "),
+    docs: event.data.meta.docs.join(" "),
     extrinsicId: callId,
     timestamp: block.timestamp,
     blockId: blockId.toString(),
