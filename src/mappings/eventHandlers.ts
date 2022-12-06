@@ -2,7 +2,7 @@ import { SubstrateBlock, SubstrateEvent, SubstrateExtrinsic } from "@subql/types
 import type { DispatchInfo } from '@polkadot/types/interfaces';
 import { BN } from '@polkadot/util';
 
-import { Block, Event, Extrinsic } from "../types";
+import { Args, Block, Event, Extrinsic } from "../types";
 
 export async function handleEvent(substrateEvent: SubstrateEvent): Promise<void> {
   const { idx, block, event, extrinsic } = substrateEvent;
@@ -28,7 +28,7 @@ export async function handleEvent(substrateEvent: SubstrateEvent): Promise<void>
     idx: idx,
     module: event.section,
     method: event.method,
-    data: event.data.toHuman(),
+    data: event.data.toHuman() as Args,
     docs: event.data.meta.docs.join(" "),
     extrinsicId: callId,
     timestamp: block.timestamp,
