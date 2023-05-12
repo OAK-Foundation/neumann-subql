@@ -1,7 +1,7 @@
 specVersion: 0.2.0
-name: neumann-subql
+name: turing-staging-subql
 version: 0.0.4
-description: Any queries for subquery for OAK's neumann network
+description: Any queries for subquery for Turing Staging network
 repository: https://github.com/oak/oak-subql
 schema:
   file: ./schema.graphql
