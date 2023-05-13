@@ -1,0 +1,21 @@
+version: "3"
+
+services:
+  postgres:
+    build:
+      context: .
+      dockerfile: ./docker/pg.Dockerfile
+    volumes:
+      - ${PG_DATA:-./.data/postgres}:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: ${PGPASSWORD:-postgres}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - oak-subql
+
+networks:
+  oak-subql:
