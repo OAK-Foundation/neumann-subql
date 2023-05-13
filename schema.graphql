@@ -121,7 +121,7 @@ type Event @entity {
   docs: String!
   data: Args
   extrinsic: Extrinsic
-  timestamp: Date!
+  timestamp: Date! @index
   block: Block
 }
 
@@ -135,6 +135,8 @@ type Extrinsic @entity {
   args: Args
   events: [Event] @derivedFrom(field: "extrinsic")
   timestamp: Date!
+
+  fromAccount: Account
 }
 
 type Args @jsonField {

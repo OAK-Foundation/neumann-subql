@@ -1,8 +1,17 @@
-specVersion: 0.2.0
-name: neumann-subql
+specVersion: 1.0.0
+name: turing-subql
 version: 0.0.4
 description: Any queries for subquery for Turing network
 repository: https://github.com/oak/oak-subql
+
+runner:
+  node:
+    name: "@subql/node"
+    version: "*"
+  query:
+    name: "@subql/query"
+    version: "*"
+
 schema:
   file: ./schema.graphql
 network:
@@ -20,3 +29,5 @@ dataSources:
           kind: substrate/BlockHandler
         - handler: handleEvent
           kind: substrate/EventHandler
+        - handler: handleCall
+          kind: substrate/CallHandler%
