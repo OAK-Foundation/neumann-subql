@@ -1,0 +1,3 @@
+turing-staging.explorer.oak.tech {
+  reverse_proxy graphql-engine:3000
+}

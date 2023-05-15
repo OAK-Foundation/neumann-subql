@@ -1,0 +1,49 @@
+version: "3.9"
+
+services:
+  graphql-engine:
+    image: onfinality/subql-query:latest
+    depends_on:
+      - postgres
+    #  - subquery-node
+    environment:
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASS: ${POSTGRES_PASSWORD:-postgress}
+      DB_DATABASE: ${DB_DATABASE:-postgres}
+      DB_HOST: ${DB_HOST:-postgres}
+      DB_PORT: ${DB_PORT:-5432}
+    command:
+      - --name=turing
+      - --playground
+      - --indexer=http://subquery-node:3000
+      - --unsafe
+    restart: always
+    networks:
+      - oak-subql
+
+  grafana:
+    image: grafana/grafana:latest
+    depends_on:
+      - graphql-engine
+    volumes:
+      - /data/grafana-data:/var/lib/grafana
+    environment:
+      - GF_INSTALL_PLUGINS=fifemon-graphql-datasource
+    restart: always
+    networks:
+      - oak-subql
+
+  caddy:
+    image: caddy
+    ports:
+      - ${CADDY_PORT_HTTP:-8880}:80
+      - ${CADDY_PORT_HTTPS:-8443}:443
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile
+      - ${CADDY_DATA_PATH:-.caddy-data}:/data
+    restart: always
+    networks:
+      - oak-subql
+
+networks:
+  oak-subql:
