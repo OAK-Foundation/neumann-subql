@@ -7,6 +7,9 @@ import { Block, Transfer } from "../types";
 import { Balance } from "@polkadot/types/interfaces";
 
 import {
+  composeEvent,
+  composeExtrinsic,
+  wrapExtrinsics,
 	findOrCreateBlock,
 	findOrCreateExtrinsic,
   findOrCreateEvent,
@@ -24,8 +27,6 @@ import {
 
 const enableTakeAccountSnapshot: boolean = true;
 
-console.log("foo", handleEventDetail);
-
 /*
  * Index block and all events in this block.
  * Find relevant account that changed its state to take a snapshot of those account
@@ -33,38 +34,38 @@ console.log("foo", handleEventDetail);
  *
  */
 export async function handleBlock(block: SubstrateBlock): Promise<void> {
-	await findOrCreateBlock(block);
-
   // process individual events inside the block, find relevant changed account to take snapshot
   const accountToSnapshot = new Set<string>();
+  const createBlock = findOrCreateBlock(block);
 
-  const blockNumber = block.block.header.number.toBigInt();
-  await Promise.all(block.events.map(async (event) => {
+  const calls = wrapExtrinsics(block).map(ext => composeExtrinsic(ext));
+  const createBulkExtrinsic = store.bulkCreate("Extrinsic", calls)
+
+  let jobs = block.events.filter(event => {
     const {
-      event: { method, section, index },
+      event: { section, method },
     } = event;
 
-    if (section === "balances") {
-      logger.debug(
-        `
+    // we only need to break down balances event if we implement such method
+    return section === "balances" && handleEventDetail[method];
+  }).map(async (event, index) => {
+    const {
+      event: { method, section },
+    } = event;
 
-        Block: ${blockNumber}, Event ${section}/${method};
-        -------------
-          ${JSON.stringify(event, null, 1)}
+    logger.info(`evt: ${method} ${section} ${index}`);
+    let accounts: string[] = await handleEventDetail[method](block, event, index);
+    accounts.forEach(a => accountToSnapshot.add(a));
+  })
 
-        =============
-        `
-      );
-
-      if (handleEventDetail[method]) {
-        let accounts: string[] = await handleEventDetail[method].call(handleEventDetail[method], block, event);
-        accounts.forEach(a => accountToSnapshot.add(a));
-      }
-    }
-  }));
+  await Promise.all([
+    createBlock,
+    createBulkExtrinsic,
+    ...jobs,
+  ]);
 
   if (enableTakeAccountSnapshot === true && accountToSnapshot.size > 0) {
-    await takeAccountSnapshot(blockNumber, Array.from(accountToSnapshot));
+    await takeAccountSnapshot(block.block.header.number.toBigInt(), Array.from(accountToSnapshot));
   }
 }
 
@@ -75,5 +76,5 @@ export async function handleEvent(substrateEvent: SubstrateEvent): Promise<void>
 
 
 export async function handleCall(extrinsic: SubstrateExtrinsic): Promise<void> {
-  const callId = await findOrCreateExtrinsic(extrinsic);
+  await findOrCreateExtrinsic(extrinsic);
 }

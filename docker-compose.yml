@@ -19,6 +19,7 @@ services:
       - -f=/app
       - --db-schema=turing
       - --log-level=${LOG_LEVEL:-info}
+      - -workers=4
     healthcheck:
       test: ["CMD", "curl", "-f", "http://subquery-node:3000/ready"]
       interval: 3s

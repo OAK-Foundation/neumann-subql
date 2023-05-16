@@ -2,6 +2,7 @@ import {
   SubstrateBlock,
   SubstrateExtrinsic,
   SubstrateEvent,
+  Entity
 } from "@subql/types";
 
 import type { DispatchInfo } from "@polkadot/types/interfaces";
@@ -21,10 +22,8 @@ import {
   AccountSnapshot,
 } from "../../types";
 
-
 import { BalanceSet } from "../../types/models/BalanceSet";
 import { Deposit } from "../../types/models/Deposit";
-import { IDGenerator } from "../../types/models/IDGenerator";
 import { Reserved } from "../../types/models/Reserved";
 import { Unreserved } from "../../types/models/Unreserved";
 import { Withdraw } from "../../types/models/Withdraw";
@@ -54,11 +53,6 @@ export async function findOrCreateBlock(substrateBlock: SubstrateBlock): Promise
 
   const id = canonicalBlockID(substrateBlock);
 
-  const existingBaseBlock = await Block.get(id)
-  if (typeof existingBaseBlock !== "undefined") {
-    return existingBaseBlock.id;
-  }
-
   // Calculate weight
   // Ref: https://github.com/polkadot-js/api/blob/30a5d4ecaae64fdcc255d6036a294a692f27cb07/packages/api-contract/src/base/util.ts#L43-L52
   // on weightv1 weightv2 conversion
@@ -74,7 +68,7 @@ export async function findOrCreateBlock(substrateBlock: SubstrateBlock): Promise
     return totalWeight.iadd(weight)
   }, new BN(0));
 
-  const blockAttributes = {
+  const record = {
     id,
     specVersion,
     timestamp,
@@ -83,10 +77,36 @@ export async function findOrCreateBlock(substrateBlock: SubstrateBlock): Promise
     weight: BigInt(blockWeight.toNumber()),
   }
 
-  const record = Block.create(blockAttributes);
-  await record.save();
+  await store.set(`Block`, id, record);
 
   return record.id;
+}
+
+
+export function composeEvent(substrateEvent: SubstrateEvent): Event {
+  const { idx, block, event, extrinsic } = substrateEvent;
+  const blockHeight = block.block.header.number;
+
+  let callId = null;
+  if (typeof extrinsic !== 'undefined') {
+    callId = canonicalExtrinsicID(extrinsic);
+  }
+
+  const blockId = canonicalBlockID(block);
+  const eventId = canonicalEventID(substrateEvent);
+
+  const record = new Event(eventId);
+  record.blockHeight = blockHeight.toBigInt()
+  record.idx = idx
+  record.module = event.section
+  record.method = event.method
+  record.data = event.data.toHuman() as Args
+  record.docs = event.data.meta.docs.join(" ")
+  record.extrinsicId = callId
+  record.timestamp = block.timestamp
+  record.blockId = blockId
+
+  return record;
 }
 
 export async function findOrCreateEvent(substrateEvent: SubstrateEvent): Promise<String> {
@@ -103,46 +123,18 @@ export async function findOrCreateEvent(substrateEvent: SubstrateEvent): Promise
       return;
     }
 
-    callId = canonicalEventID(substrateEvent);
+    callId = canonicalExtrinsicID(extrinsic);
   }
 
-  const blockId = canonicalBlockID(block);
-
-  const eventId = canonicalEventID(substrateEvent);
-  const existingEvent = await Event.get(eventId)
-  if (typeof existingEvent !== 'undefined') {
-    return existingEvent.id;
-  }
-
-  const eventAttributes = {
-    id: eventId,
-    blockHeight: blockHeight.toBigInt(),
-    idx: idx,
-    module: event.section,
-    method: event.method,
-    data: event.data.toHuman() as Args,
-    docs: event.data.meta.docs.join(" "),
-    extrinsicId: callId,
-    timestamp: block.timestamp,
-    blockId: blockId.toString(),
-  }
-
-  const record = Event.create(eventAttributes)
-  await record.save();
-
-  return record.id
+  const record = composeEvent(substrateEvent);
+  await store.set(`Event`, record.id, record);
 }
 
-export async function findOrCreateExtrinsic(substrateExtrinsic: SubstrateExtrinsic): Promise<String> {
+export function composeExtrinsic(substrateExtrinsic: SubstrateExtrinsic): Extrinsic {
   const { idx, block, extrinsic } = substrateExtrinsic;
 
   const blockHeight = block.block.header.number;
   const id = canonicalExtrinsicID(substrateExtrinsic);
-
-  const existingBaseExtrinsic = await Extrinsic.get(id)
-  if (typeof existingBaseExtrinsic !== 'undefined') {
-    return existingBaseExtrinsic.id;
-  }
 
   const args = extrinsic.method.toHuman()['args'];
   logger.debug(`
@@ -153,21 +145,40 @@ export async function findOrCreateExtrinsic(substrateExtrinsic: SubstrateExtrins
   =============
   `);
 
+  const record = new Extrinsic(id);
+  record.blockHeight = blockHeight.toBigInt()
+  record.idx = idx
+  record.module = extrinsic.method.section
+  record.method = extrinsic.method.method
+  record.success = substrateExtrinsic.success
+  record.args = args
+  record.timestamp = block.timestamp
+  record.fromAccountId = extrinsic.signer.toString()
+  record.txHash = extrinsic.hash.toString();
 
-  const callAttributes = {
-    id: id,
-    blockHeight: blockHeight.toBigInt(),
-    idx: idx,
-    module: extrinsic.method.section,
-    method: extrinsic.method.method,
-    success: substrateExtrinsic.success,
-    args: args,
-    fromAccountId: extrinsic.signer.toString(),
-    timestamp: block.timestamp,
-  }
+  return record;
+}
 
-  const record = Extrinsic.create(callAttributes);
-  await record.save();
+export function wrapExtrinsics(wrappedBlock: SubstrateBlock): SubstrateExtrinsic[] {
+  return wrappedBlock.block.extrinsics.map((extrinsic, idx) => {
+    const events = wrappedBlock.events.filter(
+      ({ phase }) => phase.isApplyExtrinsic && phase.asApplyExtrinsic.eqn(idx)
+    );
+    return {
+      idx,
+      extrinsic,
+      block: wrappedBlock,
+      events,
+      success:
+        events.findIndex((evt) => evt.event.method === "ExtrinsicSuccess") > -1,
+    };
+  });
+}
+
+export async function findOrCreateExtrinsic(substrateExtrinsic: SubstrateExtrinsic): Promise<String> {
+  const record = composeExtrinsic(substrateExtrinsic);
+  await store.set(`Extrinsic`, record.id, record);
+
   return record.id;
 }
 
@@ -176,7 +187,7 @@ export async function takeAccountSnapshot(
   blockNumber: bigint,
   accounts4snapshot: string[]
 ) {
-  accounts4snapshot.forEach(async (accountId) => {
+  Promise.all(accounts4snapshot.map(async (accountId) => {
     let accountInfo: AccountInfoAtBlock = await getAccountInfoAtBlockNumber(
       accountId,
       blockNumber
@@ -204,7 +215,6 @@ export async function takeAccountSnapshot(
         freeBalance: accountInfo.freeBalance,
         reserveBalance: accountInfo.reserveBalance,
         totalBalance: accountInfo.totalBalance,
-        aid: await getID(),
       });
       await accountRecord.save();
     } else {
@@ -214,7 +224,7 @@ export async function takeAccountSnapshot(
       accountRecord.totalBalance = accountInfo.totalBalance;
       await accountRecord.save();
     }
-  })
+  }))
 }
 async function getAccountInfoAtBlockNumber(
   accountId: string,
@@ -249,27 +259,10 @@ async function getAccountInfoAtBlockNumber(
   return accountInfo;
 }
 
-const generaterID = "GENERATOR";
-
-const getID = async () => {
-  let generator = await IDGenerator.get(generaterID);
-  if (generator == null) {
-    generator = new IDGenerator(generaterID);
-    generator.aID = BigInt(0).valueOf();
-    await generator.save();
-    logger.info(`first aID is : ${generator.aID}`);
-    return generator.aID;
-  } else {
-    generator.aID = generator.aID + BigInt(1).valueOf();
-    await generator.save();
-    logger.info(`new aID is : ${generator.aID}`);
-    return generator.aID;
-  }
-};
-
 async function handleEndowed(
   block: SubstrateBlock,
-  substrateEvent: EventRecord
+  substrateEvent: EventRecord,
+  index: number
 ): Promise<string[]> {
   const { event } = substrateEvent;
   const { timestamp: createdAt, block: rawBlock } = block;
@@ -286,7 +279,6 @@ async function handleEndowed(
     reserveBalance: BigInt(0),
     totalBalance: BigInt(balanceChange),
     blockNumber: blockNum,
-    aid: await getID(),
     timestamp: block.timestamp,
   });
   await newEndowed.save();
@@ -296,7 +288,8 @@ async function handleEndowed(
 
 export const handleTransfer = async (
   block: SubstrateBlock,
-  substrateEvent: EventRecord
+  substrateEvent: EventRecord,
+  index: number
 ): Promise<string[]> => {
   const { event } = substrateEvent;
   const { timestamp: createdAt, block: rawBlock } = block;
@@ -311,13 +304,11 @@ export const handleTransfer = async (
   logger.info(`New Transfer happened!: ${JSON.stringify(event)}`);
 
   // Create the new transfer entity
-  let aID = await getID();
-  const transfer = new Transfer(`${blockNum}-${event.index}-${aID}`);
+  const transfer = new Transfer(`${blockNum}-${index}`);
   transfer.blockNumber = blockNum;
   transfer.fromAccountId = from;
   transfer.toAccountId = to;
   transfer.balanceChange = BigInt(balanceChange);
-  transfer.aid = aID;
   transfer.timestamp = block.timestamp;
 
   await transfer.save();
@@ -328,7 +319,8 @@ export const handleTransfer = async (
 //“AccountId” ‘s free balance =”Balance1”, reserve balance = “Balance2”
 export const handleBalanceSet = async (
   block: SubstrateBlock,
-  substrateEvent: EventRecord
+  substrateEvent: EventRecord,
+  index: number
 ): Promise<string[]> => {
   const { event } = substrateEvent;
   const { timestamp: createdAt, block: rawBlock } = block;
@@ -343,11 +335,9 @@ export const handleBalanceSet = async (
   logger.info(`BalanceSet happened!: ${JSON.stringify(event)}`);
 
   // Create the new BalanceSet entity
-  let aID = await getID();
-  const balanceSet = new BalanceSet(`${blockNum}-${event.index}-${aID}`);
+  const balanceSet = new BalanceSet(`${blockNum}-${index}`);
   balanceSet.accountId = accountToSet;
   balanceSet.blockNumber = blockNum;
-  balanceSet.aid = aID;
   balanceSet.balanceChange = BigInt(balance1) + BigInt(balance2);
   balanceSet.timestamp = block.timestamp;
 
@@ -358,7 +348,8 @@ export const handleBalanceSet = async (
 //“AccountId” ’s free balance + “Balance”
 export const handleDeposit = async (
   block: SubstrateBlock,
-  substrateEvent: EventRecord
+  substrateEvent: EventRecord,
+  index: number
 ): Promise<string[]> => {
   const { event } = substrateEvent;
   const { timestamp: createdAt, block: rawBlock } = block;
@@ -369,11 +360,9 @@ export const handleDeposit = async (
   logger.info(`Deposit happened!: ${JSON.stringify(event)}`);
 
   // Create the new Deposit entity
-  let aID = await getID();
-  const deposit = new Deposit(`${blockNum}-${event.index}-${aID}`);
+  const deposit = new Deposit(`${blockNum}-${index}`);
   deposit.accountId = accountToSet;
   deposit.blockNumber = blockNum;
-  deposit.aid = aID;
   deposit.balanceChange = BigInt(balance);
   deposit.timestamp = block.timestamp;
 
@@ -384,7 +373,8 @@ export const handleDeposit = async (
 //“AccountId” ‘s free balance - “Balance”,“AccountId” ‘s reserve balance + “Balance”
 export const handleReserved = async (
   block: SubstrateBlock,
-  substrateEvent: EventRecord
+  substrateEvent: EventRecord,
+  index: number
 ): Promise<string[]> => {
   const { event } = substrateEvent;
   const { timestamp: createdAt, block: rawBlock } = block;
@@ -395,11 +385,9 @@ export const handleReserved = async (
   logger.info(`Reserved happened!: ${JSON.stringify(event)}`);
 
   // Create the new Reserved entity
-  let aID = await getID();
-  const reserved = new Reserved(`${blockNum}-${event.index}-${aID}`);
+  const reserved = new Reserved(`${blockNum}-${index}`);
   reserved.accountId = accountToSet;
   reserved.blockNumber = blockNum;
-  reserved.aid = aID;
   reserved.balanceChange = BigInt(balance);
   reserved.timestamp = block.timestamp;
 
@@ -411,7 +399,8 @@ export const handleReserved = async (
 //“AccountId” ‘s free balance + “Balance”, “AccountId” ‘s reserve balance - “Balance”
 export const handleUnreserved = async (
   block: SubstrateBlock,
-  substrateEvent: EventRecord
+  substrateEvent: EventRecord,
+  index: number
 ): Promise<string[]> => {
   const { event } = substrateEvent;
   const { timestamp: createdAt, block: rawBlock } = block;
@@ -422,11 +411,9 @@ export const handleUnreserved = async (
   logger.info(`Unreserved happened!: ${JSON.stringify(event)}`);
 
   // Create the new Reserved entity
-  let aID = await getID();
-  const unreserved = new Unreserved(`${blockNum}-${event.index}-${aID}`);
+  const unreserved = new Unreserved(`${blockNum}-${index}`);
   unreserved.accountId = accountToSet;
   unreserved.blockNumber = blockNum;
-  unreserved.aid = aID;
   unreserved.balanceChange = BigInt(balance);
   unreserved.timestamp = block.timestamp;
 
@@ -438,7 +425,8 @@ export const handleUnreserved = async (
 //“AccountId” ‘s free balance - “Balance”
 export const handleWithdraw = async (
   block: SubstrateBlock,
-  substrateEvent: EventRecord
+  substrateEvent: EventRecord,
+  index: number
 ): Promise<string[]> => {
   const { event } = substrateEvent;
   const { timestamp: createdAt, block: rawBlock } = block;
@@ -449,11 +437,9 @@ export const handleWithdraw = async (
   logger.info(`Withdraw happened!: ${JSON.stringify(event)}`);
 
   // Create the new Withdraw entity
-  let aID = await getID();
-  const withdraw = new Withdraw(`${blockNum}-${event.index}-${aID}`);
+  const withdraw = new Withdraw(`${blockNum}-${index}`);
   withdraw.accountId = accountToSet;
   withdraw.blockNumber = blockNum;
-  withdraw.aid = aID;
   withdraw.balanceChange = BigInt(balance);
   withdraw.timestamp = block.timestamp;
 
@@ -468,7 +454,8 @@ export const handleWithdraw = async (
 //If it is called through internal method “slash_reserved”, then it will slash reserve only.
 export const handleSlash = async (
   block: SubstrateBlock,
-  substrateEvent: EventRecord
+  substrateEvent: EventRecord,
+  index: number
 ): Promise<string[]> => {
   const { event } = substrateEvent;
   const { timestamp: createdAt, block: rawBlock } = block;
@@ -479,11 +466,9 @@ export const handleSlash = async (
   logger.info(`Slash happened!: ${JSON.stringify(event)}`);
 
   // Create the new Withdraw entity
-  let aID = await getID();
-  const slash = new Slash(`${blockNum}-${event.index}-${aID}`);
+  const slash = new Slash(`${blockNum}-${index}`);
   slash.accountId = accountToSet;
   slash.blockNumber = blockNum;
-  slash.aid = aID;
   slash.balanceChange = BigInt(balance);
   slash.timestamp = block.timestamp;
 
@@ -502,7 +487,8 @@ export const handleSlash = async (
 
 export const handleReservRepatriated = async (
   block: SubstrateBlock,
-  substrateEvent: EventRecord
+  substrateEvent: EventRecord,
+  index: number
 ): Promise<string[]> => {
   const { event } = substrateEvent;
   const { timestamp: createdAt, block: rawBlock } = block;
@@ -520,13 +506,11 @@ export const handleReservRepatriated = async (
   //ensure that our account entities exist
 
   // Create the new Reserved entity
-  let aID=await getID();
-  const reservRepatriated = new ReservRepatriated(`${blockNum}-${event.index}-${aID}`);
+  const reservRepatriated = new ReservRepatriated(`${blockNum}-${index}`);
 
   reservRepatriated.fromAccountId = sender;
   reservRepatriated.toAccountId = receiver;
   reservRepatriated.blockNumber = blockNum;
-  reservRepatriated.aid = aID;
   reservRepatriated.balanceChange = BigInt(balance);
   reservRepatriated.timestamp = block.timestamp;
 

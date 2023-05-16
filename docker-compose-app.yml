@@ -5,7 +5,6 @@ services:
     image: onfinality/subql-query:latest
     depends_on:
       - postgres
-    #  - subquery-node
     environment:
       DB_USER: ${DB_USER:-postgres}
       DB_PASS: ${POSTGRES_PASSWORD:-postgress}
