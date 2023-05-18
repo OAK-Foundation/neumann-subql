@@ -3,7 +3,6 @@ type Account @entity {
   freeBalance: BigInt
   reserveBalance: BigInt
   totalBalance: BigInt
-  aid: BigInt!
   atBlock: BigInt!
 }
 
@@ -26,7 +25,6 @@ type Endowed @entity {
   freeBalance: BigInt
   reserveBalance: BigInt
   totalBalance: BigInt
-  aid: BigInt!
   timestamp: Date
 }
 type Transfer @entity {
@@ -36,7 +34,6 @@ type Transfer @entity {
   toAccountId: String!
   fromAccountId: String!
   balanceChange: BigInt
-  aid: BigInt!
   timestamp: Date
 }
 
@@ -44,7 +41,6 @@ type BalanceSet @entity {
   id: ID!
   blockNumber: BigInt
   accountId: String!
-  aid: BigInt!
   balanceChange: BigInt
   timestamp: Date
 }
@@ -53,7 +49,6 @@ type Deposit @entity {
   id: ID!
   blockNumber: BigInt
   accountId: String!
-  aid: BigInt!
   balanceChange: BigInt
   timestamp: Date
 }
@@ -62,7 +57,6 @@ type Reserved @entity {
   id: ID!
   blockNumber: BigInt
   accountId: String!
-  aid: BigInt!
   balanceChange: BigInt
   timestamp: Date
 }
@@ -71,7 +65,6 @@ type Unreserved @entity {
   id: ID!
   blockNumber: BigInt
   accountId: String!
-  aid: BigInt!
   balanceChange: BigInt
   timestamp: Date
 }
@@ -80,7 +73,6 @@ type Withdraw @entity {
   id: ID!
   blockNumber: BigInt
   accountId: String!
-  aid: BigInt!
   balanceChange: BigInt
   timestamp: Date
 }
@@ -89,7 +81,6 @@ type Slash @entity {
   id: ID!
   blockNumber: BigInt
   accountId: String!
-  aid: BigInt!
   balanceChange: BigInt
   timestamp: Date
 }
@@ -101,40 +92,36 @@ type ReservRepatriated @entity {
   fromAccountId: String!
   status: String
   balanceChange: BigInt
-  aid: BigInt!
   timestamp: Date
-}
-
-type IDGenerator @entity {
-  "id"
-  id: ID!
-  "asscending ID"
-  aID: BigInt!
 }
 
 type Event @entity {
   id: ID!
   blockHeight: BigInt!
   idx: Int!
-  module: String!
-  method: String!
+  module: String! @index
+  method: String! @index
   docs: String!
   data: Args
   extrinsic: Extrinsic
-  timestamp: Date!
+  timestamp: Date! @index
   block: Block
 }
 
 type Extrinsic @entity {
   id: ID!
-  blockHeight: BigInt!
+
+  blockHeight: BigInt! @index
   idx: Int!
-  module: String!
-  method: String!
+  module: String! @index
+  method: String! @index
   success: Boolean!
   args: Args
   events: [Event] @derivedFrom(field: "extrinsic")
   timestamp: Date!
+
+  txHash: String!
+  fromAccount: Account
 }
 
 type Args @jsonField {

@@ -1,12 +1,12 @@
 {
-  "name": "neumann-subql",
+  "name": "turing-subql",
   "version": "0.0.4",
-  "description": "Any queries for subquery for OAK's neumann network",
+  "description": "Any queries for subquery for OAK's Turing network",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc -b",
     "prepack": "rm -rf dist && npm build",
-    "test": "jest",
+    "test": "./node_modules/.bin/subql build && subql-node test",
     "codegen": "./node_modules/.bin/subql codegen",
     "clean": "rm -rf .data",
     "go": "./node_modules/.bin/subql codegen && tsc -b && docker-compose pull && docker-compose up"
@@ -21,10 +21,13 @@
   "author": "OAK Network",
   "license": "MIT",
   "devDependencies": {
-    "@polkadot/api": "7.8.1",
+    "@polkadot/api": "^10",
+    "@polkadot/api-contract": "^10.7.1",
+    "@subql/cli": "latest",
+    "@subql/node": "latest",
+    "@subql/testing": "latest",
     "@subql/types": "latest",
-    "typescript": "^4.5.4",
-    "@subql/cli": "^0.16.2"
+    "typescript": "^4.5.4"
   },
   "resolutions": {
     "ipfs-unixfs": "6.0.6"
