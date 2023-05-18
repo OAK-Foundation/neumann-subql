@@ -187,10 +187,21 @@ export async function takeAccountSnapshot(
   blockNumber: bigint,
   accounts4snapshot: string[]
 ) {
-  Promise.all(accounts4snapshot.map(async (accountId) => {
-    let accountInfo: AccountInfoAtBlock = await getAccountInfoAtBlockNumber(
-      accountId,
-      blockNumber
+  let data = await api.query.system.account.multi(accounts4snapshot);
+
+  Promise.all(accounts4snapshot.map(async (accountId, index) => {
+    logger.info(`getAccountInfo at ${blockNumber} for address:${accountId}`);
+    const raw: AccountInfo = data[index] as unknown as AccountInfo;
+    let accountInfo: AccountInfoAtBlock;
+    accountInfo = {
+      accountId: accountId,
+      freeBalance: raw ? raw.data.free.toBigInt() : BigInt(0),
+      reserveBalance: raw ? raw.data.reserved.toBigInt() : BigInt(0),
+      totalBalance: raw ? (raw.data.free.toBigInt() + raw.data.reserved.toBigInt()) : BigInt(0),
+      snapshotAtBlock: blockNumber,
+    };
+    logger.info(
+      `getAccountInfo at ${blockNumber} : ${accountInfo.accountId}--${accountInfo.freeBalance}--${accountInfo.reserveBalance}--${accountInfo.totalBalance}`
     );
     let id = `${blockNumber.toString()}-${accountId}`;
     let snapshotRecords = await AccountSnapshot.get(id);
