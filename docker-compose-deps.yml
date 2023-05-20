@@ -3,12 +3,19 @@ version: "3.9"
 services:
   postgres:
     build:
-      context: .
-      dockerfile: ./docker/pg.Dockerfile
+      context: docker/postgres
+      dockerfile: Dockerfile
     volumes:
       - ${PG_DATA:-./.data/postgres}:/var/lib/postgresql/data
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
+    command:
+      - postgres
+      - "-c"
+      - 'config_file=/etc/postgresql/postgresql.conf'
+
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s

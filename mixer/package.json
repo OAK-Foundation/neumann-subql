@@ -1,0 +1,21 @@
+{
+  "name": "mixer",
+  "version": "0.0.1",
+  "description": "Data Mixing For Oak",
+  "main": "index.js",
+  "scripts": {
+    "build": "./node_modules/typescript/bin/tsc",
+    "test": "node dist/index.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "pg": "^8.11.0",
+    "ts-node": "^10.9.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.2.1",
+    "tslib": "^2.5.2",
+    "typescript": "^5.0.4"
+  }
+}

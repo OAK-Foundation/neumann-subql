@@ -28,5 +28,21 @@ services:
     networks:
       - oak-subql
 
+  mixer:
+    build:
+      context: ./mixer/
+    depends_on:
+      - postgres
+    restart: always
+    environment:
+      PGUSER: ${DB_USER:-postgres}
+      PGPASSWORD: ${DB_PASS:-postgres}
+      PGDATABASE: ${DB_DATABASE:-postgres}
+      PGHOST: ${DB_HOST:-postgres}
+      PGPORT: 5432
+    volumes:
+      - ./mixer:/app
+    networks:
+      - oak-subql
 networks:
   oak-subql:
