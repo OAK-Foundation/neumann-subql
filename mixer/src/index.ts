@@ -27,12 +27,18 @@ const listen = async() => {
   const changeFeed = new Wal2JSONListener(
     client,
     {slotname: mixerSlot, temporary: false, timeout: 500},
-    {addTables: "extrinsics,events"}
+    {addTables: "turing.extrinsics,turing.events"}
   )
+  changeFeed.start();
 
   try {
-    for await (const row of changeFeed.next()) {
-      console.log("got change", row);
+    for await (const rows of changeFeed.next()) {
+      for (const row of rows) {
+        const data = JSON.parse(row.data);
+        if (data.action == "I") {
+          console.log("got change", data);
+        }
+      }
     }
   } catch (e) {
     console.log("error when fetching changeset.", e);

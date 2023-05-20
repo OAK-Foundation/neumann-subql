@@ -47,8 +47,12 @@ class Wal2JSONListener {
 
     this.walOptions = walOptions;
 
-    this.query = "SELECT data FROM pg_logical_slot_get_changes($1, NULL, NULL, 'pretty-print', '1', 'add-tables', $2)";
-    this.queryParams = [walOptions.addTables,];
+    this.query = "SELECT data FROM pg_logical_slot_get_changes($1, NULL, NULL, 'pretty-print', '1', 'format-version', '2', 'add-tables', $2, 'actions', $3)";
+    this.queryParams = [
+      this.slotname,
+      walOptions.addTables,
+      "insert",
+    ];
 
     this.running = false;
   }
@@ -65,6 +69,10 @@ class Wal2JSONListener {
     while (this.running) {
       // because we don't manage the client, we let the consumer deal with the connection error and retrying logic
       const results = await this.client.query(this.query, this.queryParams);
+      if (!this.running) {
+        return
+      }
+
       if (results.rows.length > 0) {
         yield results.rows
       }

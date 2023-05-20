@@ -34,6 +34,9 @@ services:
     depends_on:
       - postgres
     restart: always
+    entrypoint:
+      - sleep
+      - infinity
     environment:
       PGUSER: ${DB_USER:-postgres}
       PGPASSWORD: ${DB_PASS:-postgres}
