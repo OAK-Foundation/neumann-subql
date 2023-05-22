@@ -10,5 +10,5 @@ RUN set -xe && \
 # Ref:
 #  https://hevodata.com/learn/postgresql-logical-replication/
 #  https://www.postgresql.org/docs/current/protocol-replication.html
-COPY docker/postgres.conf /usr/share/postgresql/postgresql.conf
-COPY docker/load-extensions.sh /docker-entrypoint-initdb.d/
+COPY postgresql.conf /etc/postgresql/postgresql.conf
+COPY init/ /docker-entrypoint-initdb.d/

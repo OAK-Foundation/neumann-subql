@@ -137,3 +137,25 @@ type Block @entity {
   weight: BigInt!
   events: [Event] @derivedFrom(field:"block")
 }
+
+type Task @entity {
+  id: ID!
+  blockHeight: BigInt! @index
+  event: Event!
+  extrinsic: Extrinsic
+  timestamp: Date!
+  status: String
+  creator: Account!
+}
+
+type TaskEvent @entity {
+  id: ID!
+  blockHeight: BigInt! @index
+  idx: Int!
+  module: String! @index
+  method: String! @index
+  event: Event!
+  extrinsic: Extrinsic
+  task: Task!
+  timestamp: Date!
+}
