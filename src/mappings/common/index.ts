@@ -20,6 +20,7 @@ import {
   Extrinsic,
   Account,
   AccountSnapshot,
+  TaskEvent,
 } from "../../types";
 
 import { BalanceSet } from "../../types/models/BalanceSet";
@@ -127,7 +128,29 @@ export async function findOrCreateEvent(substrateEvent: SubstrateEvent): Promise
   }
 
   const record = composeEvent(substrateEvent);
-  await store.set(`Event`, record.id, record);
+  const promises = [
+    store.set(`Event`, record.id, record),
+  ];
+
+  if (record.module == "automationTime") {
+    const data = event.data.toHuman() as { taskId?: string };
+
+    if (data.taskId) {
+      // break down the task 
+      const ta = new TaskEvent(record.id);
+      ta.blockHeight = blockHeight.toBigInt();
+      ta.idx = idx;
+      ta.module = event.section;
+      ta.method = event.method;
+      ta.eventId = record.id;
+      ta.extrinsicId = callId;
+      ta.timestamp = block.timestamp;
+      ta.taskId = data["taskId"];
+      promises.push(store.set(`TaskEvent`, ta.id, ta));
+    }
+  }
+
+  await Promise.all(promises);
 }
 
 export function composeExtrinsic(substrateExtrinsic: SubstrateExtrinsic): Extrinsic {
