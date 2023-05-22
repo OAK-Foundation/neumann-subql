@@ -40,8 +40,6 @@ services:
       PGDATABASE: ${DB_DATABASE:-postgres}
       PGHOST: ${DB_HOST:-postgres}
       PGPORT: 5432
-    volumes:
-      - ./mixer:/app
     networks:
       - oak-subql
 networks:
