@@ -1,0 +1,99 @@
+x-superset-image: &superset-image apache/superset:${TAG:-latest-dev}
+x-superset-depends-on: &superset-depends-on
+  - db
+  - redis
+x-superset-volumes: &superset-volumes
+  # /app/pythonpath_docker will be appended to the PYTHONPATH in the final container
+  - ./docker/superset:/app/docker
+  - ${SUPERSET_HOME_DATA:-./.data/superset_home}:/app/superset_home
+
+x-environment: &environment
+  - DATABASE_HOST=postgres
+  - DATABASE_DB=superset
+  - DATABASE_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+  - DATABASE_USER=postgres
+  - DATABASE_PORT=5432
+  - DATABASE_DIALECT=postgresql
+
+  - POSTGRES_DB=superset
+  - POSTGRES_USER=postgres
+  - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+  - PYTHONPATH=/app/pythonpath:/app/docker/pythonpath_dev
+  - REDIS_HOST=redis
+  - REDIS_PORT=6379
+  - FLASK_ENV=production
+  - SUPERSET_ENV=production
+  - SUPERSET_LOAD_EXAMPLES=no
+  - SUPERSET_SECRET_KEY=${SUPERSET_SECRET_KEY:-secretkey}
+  - CYPRESS_CONFIG=false
+  - SUPERSET_PORT=8088
+  - MAPBOX_API_KEY=${MAPBOX_API_KEY:-}
+
+version: "3.9"
+services:
+  redis:
+    image: redis:7
+    container_name: superset_cache
+    restart: unless-stopped
+    volumes:
+      - ${REDIS_DATA:-./.data/redis}:/data
+    networks:
+      - oak-subql
+
+  superset:
+    environment: *environment
+    image: *superset-image
+    container_name: superset_app
+    command: ["/app/docker/docker-bootstrap.sh", "app-gunicorn"]
+    user: "root"
+    restart: unless-stopped
+    ports:
+      - 8088:8088
+    depends_on: *superset-depends-on
+    volumes: *superset-volumes
+    networks:
+      - oak-subql
+
+  superset-init:
+    image: *superset-image
+    container_name: superset_init
+    command: ["/app/docker/docker-init.sh"]
+    environment: *environment
+    depends_on: *superset-depends-on
+    user: "root"
+    volumes: *superset-volumes
+    healthcheck:
+      disable: true
+    networks:
+      - oak-subql
+
+  superset-worker:
+    image: *superset-image
+    container_name: superset_worker
+    command: ["/app/docker/docker-bootstrap.sh", "worker"]
+    environment: *environment
+    restart: unless-stopped
+    depends_on: *superset-depends-on
+    user: "root"
+    volumes: *superset-volumes
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A superset.tasks.celery_app:app inspect ping -d celery@$$HOSTNAME"]
+    networks:
+      - oak-subql
+
+  superset-worker-beat:
+    image: *superset-image
+    container_name: superset_worker_beat
+    command: ["/app/docker/docker-bootstrap.sh", "beat"]
+    environment: *environment
+    restart: unless-stopped
+    depends_on: *superset-depends-on
+    user: "root"
+    volumes: *superset-volumes
+    healthcheck:
+      disable: true
+    networks:
+      - oak-subql
+
+networks:
+  oak-subql:
