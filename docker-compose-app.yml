@@ -27,7 +27,7 @@ services:
       - ${CADDY_PORT_HTTPS:-8443}:443
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile
-      - ${CADDY_DATA_PATH:-.caddy-data}:/data
+      - ${CADDY_DATA_PATH:-./data/caddy}:/data
     restart: always
     networks:
       - oak-subql

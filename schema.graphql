@@ -152,14 +152,10 @@ type TaskEvent @entity {
   id: ID!
   blockHeight: BigInt! @index
   idx: Int!
+  module: String! @index
   method: String! @index
   event: Event!
   extrinsic: Extrinsic
-
-  timestamp: Date!
-
   task: Task!
-  taskCreator: Account!
-  originalTaskCreatedExtrinsic: Extrinsic
-  originalTaskCreatedAt: Date
+  timestamp: Date!
 }

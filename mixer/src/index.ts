@@ -1,12 +1,18 @@
-const { Client } = require("pg");
+import client, {
+  init as initDb,
+  shutdown as shutdownDb,
+} from './db';
 
 import Wal2JSONListener from "./lib/wal2json";
+import {
+  ChangeRow,
+  processChange,
+} from "./etl";
 
-const client = new Client();
 const mixerSlot = "turing_mixer";
 
-const initDb = async () => {
-  await client.connect();
+const init = async () => {
+  await initDb();
   console.log("initialized db");
 
   // setup replica slot
@@ -19,36 +25,46 @@ const initDb = async () => {
 }
 
 const shutdown = async () => {
-  await client.close();
+  listener.stop();
+  shutdownDb();
+  process.exit(1);
 }
+
+const listener = new Wal2JSONListener(
+  client,
+  {slotname: mixerSlot, temporary: false, timeout: 500, batchSize: 5,},
+  {addTables: "*.extrinsics,*.events"}
+);
 
 const listen = async() => {
   // Now listen to the change
-  const changeFeed = new Wal2JSONListener(
-    client,
-    {slotname: mixerSlot, temporary: false, timeout: 500},
-    {addTables: "extrinsics,events"}
-  )
+  listener.start();
 
   try {
-    for await (const row of changeFeed.next()) {
-      console.log("got change", row);
+    for await (const change of listener.next()) {
+      if (!change.data) {
+        continue;
+      }
+
+      const row = JSON.parse(change.data);
+      await processChange(row);
     }
   } catch (e) {
-    console.log("error when fetching changeset.", e);
-    shutdown()
+    // TODO: add sentry
+    console.log("error when fetching changeset: ", e);
+    shutdown();
   }
 }
 
 const setupSignal = async () => {
   process.on("SIGINT", async function () {
     console.log("receive sigint, start shutting down process")
-    await client.end()
+    await shutdown();
   })
 }
 
 Promise.all([
-  initDb(),
+  init(),
   setupSignal(),
 ]).then(() => {
   listen();
