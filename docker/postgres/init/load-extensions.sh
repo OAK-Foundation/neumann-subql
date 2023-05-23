@@ -18,9 +18,9 @@ CREATE OR REPLACE FUNCTION generate_block_ulid(block_epoch integer) RETURNS uuid
 
 CREATE OR REPLACE FUNCTION to_uuid(raw text)
   RETURNS uuid IMMUTABLE STRICT
-  AS $$
+  AS \$\$
     BEGIN
       RETURN uuid_in(overlay(overlay(md5(raw) placing '4' from 13) placing '8' from 17)::cstring);
     END;
-$$ LANGUAGE plpgsql;
+\$\$ LANGUAGE plpgsql;
 EOF
