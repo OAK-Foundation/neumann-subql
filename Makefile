@@ -4,10 +4,11 @@ help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
 up: ## bring up everything in the right order
-	docker compose -f docker-compose-deps.yml -f docker-compose.yml -f docker-compose-app.yml up -d
+	docker compose -f docker-compose-deps.yml -f docker-compose-ss.yml -f docker-compose.yml -f docker-compose-app.yml build
+	docker compose -f docker-compose-deps.yml -f docker-compose-ss.yml -f docker-compose.yml -f docker-compose-app.yml up -d
 
 down: ## bring down everything in the right order
-	docker compose -f docker-compose-deps.yml -f docker-compose.yml -f docker-compose-app.yml down
+	docker compose -f docker-compose-deps.yml -f docker-compose-ss.yml -f docker-compose.yml -f docker-compose-app.yml down
 
 ###############################################################################
 #################################  Local Dev  #################################

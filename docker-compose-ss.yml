@@ -1,6 +1,5 @@
 x-superset-image: &superset-image apache/superset:${TAG:-latest-dev}
 x-superset-depends-on: &superset-depends-on
-  - db
   - redis
 x-superset-volumes: &superset-volumes
   # /app/pythonpath_docker will be appended to the PYTHONPATH in the final container
@@ -47,10 +46,22 @@ services:
     command: ["/app/docker/docker-bootstrap.sh", "app-gunicorn"]
     user: "root"
     restart: unless-stopped
-    ports:
-      - 8088:8088
     depends_on: *superset-depends-on
     volumes: *superset-volumes
+    networks:
+      - oak-subql
+
+  superset-caddy:
+    image: caddy
+    container_name: superset_caddy
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-localhost}
+    ports:
+      - 8088:443
+    volumes:
+      - ./caddy/superset.Caddyfile:/etc/caddy/Caddyfile
+      - ${CADDY_DATA_PATH:-./data/caddy}:/data
+    restart: always
     networks:
       - oak-subql
 
