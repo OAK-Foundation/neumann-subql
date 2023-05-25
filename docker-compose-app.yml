@@ -24,6 +24,7 @@ services:
     image: caddy
     environment:
       SITE_ADDRESS: ${SITE_ADDRESS:-localhost}
+      INSIGHTS_ADDRESS: ${INSIGHTS_ADDRESS:-localhost}
     ports:
       - ${CADDY_PORT_HTTP:-8880}:80
       - ${CADDY_PORT_HTTPS:-8443}:443

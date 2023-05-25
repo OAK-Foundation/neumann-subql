@@ -51,20 +51,6 @@ services:
     networks:
       - oak-subql
 
-  superset-caddy:
-    image: caddy
-    container_name: superset_caddy
-    environment:
-      SITE_ADDRESS: ${SITE_ADDRESS:-localhost}
-    ports:
-      - 8088:443
-    volumes:
-      - ./caddy/superset.Caddyfile:/etc/caddy/Caddyfile
-      - ${CADDY_DATA_PATH:-./data/caddy}:/data
-    restart: always
-    networks:
-      - oak-subql
-
   superset-init:
     image: *superset-image
     container_name: superset_init

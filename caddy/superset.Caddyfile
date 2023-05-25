@@ -1,5 +1,0 @@
-{$INSIGHTS_ADDRESS} {
-  reverse_proxy superset:8088 {
-    header_up X-Forwarded-Proto https
-  }
-}
