@@ -1,3 +1,9 @@
-turing-staging.explorer.oak.tech {
+{$SITE_ADDRESS} {
   reverse_proxy graphql-engine:3000
+}
+
+{$INSIGHTS_ADDRESS} {
+  reverse_proxy superset:8088 {
+    header_up X-Forwarded-Proto https
+  }
 }
