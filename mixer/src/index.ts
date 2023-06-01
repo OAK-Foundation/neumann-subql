@@ -79,11 +79,14 @@ const listen = async() => {
 const backfill = async() => {
   while (true) {
     const result = await client.query('select id, hash from turing.blocks where collator_id is null limit 30');
-    if (result && result.rows) {
+    if (result && result.rows && result.rows.length >=1) {
       await Promise.all(result.rows.map(async (row) => {
         console.log("row", row);
         await populateBlockMetadata(row["hash"], row.id, api);
       }));
+    } else {
+      console.log("backfill is done. exit");
+      break;
     }
   }
 }
@@ -93,13 +96,15 @@ const setupSignal = async () => {
     console.log("receive sigint, start shutting down process")
     await shutdown();
   })
+  // TODO: Sentry integration
+  process.on('unhandledRejection', error => { throw error })
 }
 
 Promise.all([
   init(),
   setupSignal(),
 ]).then(() => {
-  // backfill can be remove when we're catching up
+  // backfill can be removed when we're finished catching up
   backfill();
   listen();
   console.log("mixer booted succesfully, start running");
