@@ -136,6 +136,10 @@ type Block @entity {
   timestamp: Date!
   weight: BigInt!
   events: [Event] @derivedFrom(field:"block")
+
+  collator: Account @index
+  stateRoot: String
+  extrinsicsRoot: String
 }
 
 type Task @entity {
@@ -158,4 +162,28 @@ type TaskEvent @entity {
   extrinsic: Extrinsic
   task: Task!
   timestamp: Date!
+}
+
+type Collator @entity {
+  id: ID! # Collator address
+  joinedDate: Date!
+}
+
+type ValidatorThreshold @entity {
+  # era index
+  id: ID!
+
+  startBlock: Int! @index(unique: true)
+
+  timestamp: Date! @index(unique: true)
+
+  validatorWithLeastBond: String
+
+  leastStaked: BigInt
+
+  totalStaked: BigInt
+
+  maxNominatorRewardedPerValidator: Int
+
+  totalValidators: Int
 }

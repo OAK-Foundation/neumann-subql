@@ -21,6 +21,7 @@ import {
   Account,
   AccountSnapshot,
   TaskEvent,
+  Collator,
 } from "../../types";
 
 import { BalanceSet } from "../../types/models/BalanceSet";
@@ -36,7 +37,6 @@ import {
   canonicalEventID,
   canonicalExtrinsicID,
 } from "./canonical_id";
-
 
 class AccountInfoAtBlock {
   accountId: string;
@@ -131,6 +131,18 @@ export async function findOrCreateEvent(substrateEvent: SubstrateEvent): Promise
   const promises = [
     store.set(`Event`, record.id, record),
   ];
+
+
+  // collator join event
+  if (record.module == "parachainStaking" && record.method == "JoinedCollatorCandidates") {
+    const address = extrinsic.extrinsic.signer.toString();
+    const collator = Collator.create({
+      id: address,
+      joinedDate: block.timestamp
+    });
+
+    promises.push(collator.save());
+  }
 
   if (record.module == "automationTime") {
     const data = event.data.toHuman() as { taskId?: string };

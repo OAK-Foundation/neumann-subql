@@ -1,5 +1,6 @@
 import client from "../db";
 
+
 const MAYBE_NEW_TASK = "new_task";
 
 export interface ChangeColumn {
@@ -15,7 +16,8 @@ export interface ChangeRow {
   columns: ChangeColumn[];
 }
 
-export const processChange = async (doc: ChangeRow): Promise<void|string[]> => {
+
+export const processChange = async (doc: ChangeRow, api): Promise<void|string[]> => {
   if (doc.action != "I") {
     // these are begin/commit
     return;
@@ -37,7 +39,26 @@ export const processChange = async (doc: ChangeRow): Promise<void|string[]> => {
     }
   }
 
+  if (doc.table == "blocks") {
+    const blockHash = doc.columns.find(c => c.name == "hash")?.value;
+    const blockId = doc.columns.find(c => c.name == "id")?.value
+    await populateBlockMetadata(blockHash, blockId, api)
+  }
+
   return Array.from(changes);
+}
+
+export const populateBlockMetadata = async(blockHash, blockId, api) => {
+  try {
+    const header = await api.derive.chain.getHeader(blockHash);
+    const v = header.toHuman();
+    await client.query(`update turing.blocks
+    set collator_id = $1, state_root=$2, extrinsics_root=$3
+    where id = $4`, [header.author.toString(), v.stateRoot, v.extrinsicsRoot, blockId]);
+  } catch (e) {
+    console.log(`error when populate block metadata`, e);
+  }
+  return;
 }
 
 export const populateTask = async() => {
