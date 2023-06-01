@@ -2,8 +2,7 @@ version: "3.9"
 
 services:
   subquery-node:
-    image: onfinality/subql-node:latest
-    # image: onfinality/subql-node:v1.9.3-3
+    image: onfinality/subql-node:v2.5.1
     depends_on:
       - postgres
     restart: always
