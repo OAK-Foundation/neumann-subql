@@ -1,5 +1,4 @@
 import { ApiPromise, WsProvider } from "@polkadot/api";
-
 import client, {
   init as initDb,
   shutdown as shutdownDb,
@@ -16,8 +15,15 @@ import {
   populateBlockMetadata,
 } from "./etl";
 
-const mixerSlot = "turing_mixer";
+import * as Sentry from '@sentry/node';
+import {
+  initSentry
+} from "./monitoring/errors";
 
+// call sentry very early
+initSentry();
+
+const mixerSlot = "turing_mixer";
 
 const init = async () => {
   await initDb();
@@ -27,7 +33,7 @@ const init = async () => {
   console.log("migrated db");
 
   await initRPC();
-  console.log("initialize rpc client");
+  console.log("initialized rpc client");
 
   // setup replica slot
   const checkQuery = "SELECT * FROM pg_replication_slots WHERE slot_name = $1;";
@@ -72,6 +78,7 @@ const listen = async() => {
   } catch (e) {
     // TODO: add sentry
     console.log("error when fetching changeset: ", e);
+    Sentry.captureException(e);
     shutdown();
   }
 }
@@ -81,7 +88,6 @@ const backfill = async() => {
     const result = await client.query('select id, hash from turing.blocks where collator_id is null limit 30');
     if (result && result.rows && result.rows.length >=1) {
       await Promise.all(result.rows.map(async (row) => {
-        console.log("row", row);
         await populateBlockMetadata(row["hash"], row.id, api);
       }));
     } else {
@@ -93,11 +99,15 @@ const backfill = async() => {
 
 const setupSignal = async () => {
   process.on("SIGINT", async function () {
-    console.log("receive sigint, start shutting down process")
+    console.log("receive sigint, start shutting down process");
     await shutdown();
   })
-  // TODO: Sentry integration
-  process.on('unhandledRejection', error => { throw error })
+  process.on('unhandledRejection', (error) => {
+    Sentry.captureException(error);
+
+    // rethrow so the app just crash, rather failed and auto restart than continue in undefined state
+    throw error;
+  });
 }
 
 Promise.all([
