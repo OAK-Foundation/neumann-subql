@@ -95,9 +95,6 @@ const backfill = async() => {
       await Promise.all(result.rows.map(async (row) => {
         await populateBlockMetadata(row["hash"], row.id, api);
       }));
-    } else {
-      console.log("backfill is done. exit");
-      break;
     }
 
     // At the last round, we will have less than limit or no row at all
