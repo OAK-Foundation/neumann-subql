@@ -1,5 +1,19 @@
+(cors) {
+  header_down Access-Control-Allow-Origin  *
+  header_down Access-Control-Allow-Methods "OPTIONS, DELETE, GET, HEAD, POST, PUT"
+}
+
+
 {$SITE_ADDRESS} {
-  reverse_proxy graphql-engine:3000
+  reverse_proxy graphql-engine:3000 {
+	  import cors *
+  }
+}
+
+{$API_ADDRESS} {
+  reverse_proxy graphql-engine:3000 {
+	  import cors *
+  }
 }
 
 {$INSIGHTS_ADDRESS} {
