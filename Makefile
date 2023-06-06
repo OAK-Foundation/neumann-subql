@@ -10,6 +10,9 @@ up: ## bring up everything in the right order
 down: ## bring down everything in the right order
 	docker compose -f docker-compose-deps.yml -f docker-compose-ss.yml -f docker-compose.yml -f docker-compose-app.yml down
 
+build: ## build docker image
+	docker compose -f docker-compose-deps.yml -f docker-compose-ss.yml -f docker-compose.yml -f docker-compose-app.yml build
+
 ###############################################################################
 #################################  Local Dev  #################################
 ###############################################################################

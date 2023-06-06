@@ -1,0 +1,21 @@
+name: Staging Deploy
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - staging
+      # TODO: remove right before merge, this is just to test
+      - add-github-action-deployment
+
+
+jobs:
+  staging-deploy:
+    name: Staging Deploy
+    uses: ./.github/workflows/deploy.yml
+    with:
+      target_env: "staging"
+    secrets:
+      SSH_DEPLOY_KEY: ${{ secrets.SSH_DEPLOY_KEY }}
+      SECRET_FILE: ${{ secrets.SECRET_FILE }}
+      HOST: ${{ secrets.HOST }}

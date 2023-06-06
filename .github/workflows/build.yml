@@ -1,0 +1,27 @@
+name: "Build & Lint"
+
+on:
+  push:
+
+jobs:
+  build:
+    name: "Build & Lint TypeScript"
+    runs-on: ubuntu-latest
+    # node lts
+    container: node:18.16.0
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Build TypeScript Code for subql
+        run: |
+          npm i --ci
+          ./node_modules/.bin/subql codegen
+          ./node_modules/.bin/subql build
+
+      - name: Build TypeScript Code for mixer
+        run: |
+          npm i --ci
+          npm run build
+        working-directory: mixer
