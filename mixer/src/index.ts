@@ -84,17 +84,22 @@ const listen = async() => {
 }
 
 const backfill = async() => {
-  while (true) {
-    const result = await client.query('select id, hash from turing.blocks where collator_id is null limit 30');
-    if (result && result.rows && result.rows.length >=1) {
+  let batchSize = 0;
+  const pageSize = 30;
+  do {
+    // fetch and work on 30 blocks at a time
+    const result = await client.query('select id, hash from turing.blocks where collator_id is null limit $1', [pageSize]);
+
+    batchSize = result?.rows?.length || 0;
+
+    if (batchSize >=1) {
       await Promise.all(result.rows.map(async (row) => {
         await populateBlockMetadata(row["hash"], row.id, api);
       }));
-    } else {
-      console.log("backfill is done. exit");
-      break;
     }
-  }
+
+    // At the last round, we will have less than limit or no row at all
+  } while (batchSize >= pageSize);
 }
 
 const setupSignal = async () => {
