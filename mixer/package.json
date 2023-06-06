@@ -10,6 +10,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@polkadot/api": "^10.7.3",
+    "@sentry/node": "^7.54.0",
     "pg": "^8.11.0",
     "ts-node": "^10.9.1"
   },

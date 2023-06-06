@@ -8720,9 +8720,9 @@
   "version" "1.14.1"
 
 "tslib@^2", "tslib@^2.0.0", "tslib@^2.1.0", "tslib@^2.3.0", "tslib@^2.3.1", "tslib@^2.4.0", "tslib@^2.4.1", "tslib@^2.5.0":
-  "integrity" "sha512-336iVw3rtn2BUK7ORdIAHTyxHGRIHVReokCR3XjbckJMK7ms8FysBfhLR8IXnAgy7T0PTPNBWKiH514FOW/WSg=="
-  "resolved" "https://registry.npmjs.org/tslib/-/tslib-2.5.0.tgz"
-  "version" "2.5.0"
+  "integrity" "sha512-5svOrSA2w3iGFDs1HibEVBGbDrAY82bFQ3HZ3ixB+88nsbsWQoKqDRb5UBYAUPEzbBn6dAp5gRNXglySbx1MlA=="
+  "resolved" "https://registry.npmjs.org/tslib/-/tslib-2.5.2.tgz"
+  "version" "2.5.2"
 
 "tslib@2.4.0":
   "integrity" "sha512-d6xOpEDfsi2CZVlPQzGeux8XMwLT9hssAsaPYExaQMuYskwb+x1x7J371tWlbBdWHroy99KnVB6qIkUbs5X3UQ=="
