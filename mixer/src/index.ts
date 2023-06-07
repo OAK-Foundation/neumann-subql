@@ -2,6 +2,7 @@ import { ApiPromise, WsProvider } from "@polkadot/api";
 import client, {
   init as initDb,
   shutdown as shutdownDb,
+  getConn,
 } from "./db";
 
 import {
@@ -51,19 +52,32 @@ const initRPC = async () => {
 }
 
 const shutdown = async () => {
-  listener.stop();
+  if (listener) {
+    console.log("stop listener");
+    listener.stop();
+  }
+
+  if (subscriptionClient) {
+    console.log("close db connection");
+    subscriptionClient.release();
+  }
+
   shutdownDb();
   process.exit(1);
 }
 
-const listener = new Wal2JSONListener(
-  client,
-  {slotname: mixerSlot, temporary: false, timeout: 500, batchSize: 5,},
-  {addTables: "*.extrinsics,*.events,*.blocks"}
-);
+let subscriptionClient;
+let listener;
 
 const listen = async() => {
   // Now listen to the change
+  subscriptionClient = await getConn();
+  listener = new Wal2JSONListener(
+    subscriptionClient,
+    {slotname: mixerSlot, temporary: false, timeout: 500, batchSize: 5,},
+    {addTables: "*.extrinsics,*.events,*.blocks"}
+  );
+
   listener.start();
 
   try {

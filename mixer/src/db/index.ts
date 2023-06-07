@@ -16,3 +16,10 @@ const executor = {
 };
 
 export default executor
+
+export const getConn = async () => {
+  const conn = await db.connect();
+  await conn.query("set search_path to turing");
+
+  return conn;
+}
