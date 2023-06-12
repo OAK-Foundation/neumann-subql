@@ -5,8 +5,6 @@ on:
   push:
     branches:
       - staging
-      # TODO: remove right before merge, this is just to test
-      - add-github-action-deployment
 
 
 jobs:
