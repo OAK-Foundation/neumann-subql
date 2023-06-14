@@ -20,21 +20,5 @@ services:
     networks:
       - oak-subql
 
-  caddy:
-    image: caddy
-    environment:
-      SITE_ADDRESS: ${SITE_ADDRESS:-localhost}
-      API_ADDRESS: ${API_ADDRESS:-localhost}
-      INSIGHTS_ADDRESS: ${INSIGHTS_ADDRESS:-localhost}
-    ports:
-      - ${CADDY_PORT_HTTP:-8880}:80
-      - ${CADDY_PORT_HTTPS:-8443}:443
-    volumes:
-      - ./caddy/Caddyfile:/etc/caddy/Caddyfile
-      - ${CADDY_DATA_PATH:-./data/caddy}:/data
-    restart: always
-    networks:
-      - oak-subql
-
 networks:
   oak-subql:
