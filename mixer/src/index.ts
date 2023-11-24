@@ -64,9 +64,11 @@ const listener = new Wal2JSONListener(
 
 const listen = async() => {
   // Now listen to the change
+  console.log("listen to changes");
   listener.start();
 
   try {
+    console.log("wait to next changes");
     for await (const change of listener.next()) {
       if (!change.data) {
         continue;
