@@ -7,7 +7,12 @@ export const migrate = async () => {
   await Promise.all([
     client.query('alter table turing.blocks add column if not exists collator_id varchar(255)'),
     client.query('alter table turing.blocks add column if not exists state_root varchar(255)'),
-    client.query('alter table turing.blocks add column if not exists extrinsics_root varchar(255)'),])
+    client.query('alter table turing.blocks add column if not exists extrinsics_root varchar(255)'),
+    client.query('alter table turing.tasks  add column if not exists completed_at timestamp'),
+    client.query('alter table turing.tasks  add column if not exists canceled_at timestamp'),
+    client.query('alter table turing.tasks  add column if not exists scheduled_start_at timestamp'),
+    client.query('alter table turing.tasks  add column if not exists scheduled_end_at timestamp'),
+  ])
 
   // column need to be create before commit
   await Promise.all([
