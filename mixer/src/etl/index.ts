@@ -1,5 +1,5 @@
 import client from "../db";
-
+import * as Sentry from '@sentry/node';
 
 const MAYBE_NEW_TASK = "new_task";
 const DEBUG = process.env["DEBUG"] == "1";
@@ -53,6 +53,10 @@ export const processChange = async (doc: ChangeRow, api): Promise<void|string[]>
         }
         if (doc.columns.some(a => a.name == "method" && a.value == TaskCanceledEvent)) {
           await updateTaskStatus(TaskStatus.Canceled);
+        }
+
+        if (doc.columns.some(a => a.name == "method" && ["TaskExecuted", "TaskExecutionFailed"].includes(a.value))) {
+          await updateTaskMetric(data.taskId);
         }
       }
     }
@@ -146,5 +150,49 @@ export const updateTaskStatus = async(status: TaskStatus) => {
     await client.query(query, [method, status]);
   } catch (e) {
     console.log("error when updating task status", e, query)
+    Sentry.captureException(e);
+  }
+}
+
+export const updateTaskMetric = async(taskId: String) => {
+  const query = `
+    with task_run as (
+      select 
+       count(*) as occurence,
+       task_id 
+      from task_events 
+      
+      where method in(
+        -- old native transfer event when run, 
+        'SuccessfullyTransferredFunds', 'TransferFailed', 
+        -- old xcmp 
+        'XcmpTaskSucceeded', 'XcmpTaskFailed',
+
+        -- auto compounted task
+        'SuccesfullyAutoCompoundedDelegatorStake',
+        'AutoCompoundDelegatorStakeFailed',
+
+        -- old dynamic dispatch
+        'DynamicDispatchResult',
+        'CallCannotBeDecoded',
+
+        'TaskExecuted',
+        'TaskExecutionFailed'
+      ) and task_id = $1
+      
+      group by task_id 
+    )
+
+    update tasks
+    set executed_count=r.occurence
+    from task_run as r
+    where tasks.id = r.task_id
+  `;
+
+  try {
+    await client.query(query, [taskId]);
+  } catch (e) {
+    console.log("error when updating task metric", e, query)
+    Sentry.captureException(e);
   }
 }
