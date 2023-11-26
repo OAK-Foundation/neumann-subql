@@ -156,6 +156,8 @@ type Task @entity {
   scheduled_start_at: Date
   scheduled_end_at: Date
 
+  executed_count: BigInt!
+
   creator: Account!
 }
 
