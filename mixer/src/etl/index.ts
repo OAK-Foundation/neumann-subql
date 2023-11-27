@@ -84,8 +84,8 @@ export const populateBlockMetadata = async(blockHash, blockId, api) => {
   return;
 }
 
-export const populateTask = async() => {
-  const taskHeight = await client.query(`
+export const populateTask = async() => 
+  const query = `
     with data as (
     select
         events.id as event_id,
@@ -117,11 +117,18 @@ export const populateTask = async() => {
     select
         d.task_id, d.block_height, d.event_id, d.extrinsic_id, d.timestamp,
         -- when task first scheduled, it's in actived status
-        d.task_creator_id, $1,
+        d.task_creator_id, 'active' as status,
         to_uuid(d.task_id), int8range(d.block_height::int8, null)
     from data as d
     on conflict do nothing;
-  `, [TaskStatus.Active]);
+  `;
+
+  try {
+    await client.query(query,[TaskStatus.Active]);
+  } catch (e) {
+    console.log("error when populating task", e, query)
+    Sentry.captureException(e);
+  }
 }
 
 export const updateTaskStatus = async(status: TaskStatus) => {
