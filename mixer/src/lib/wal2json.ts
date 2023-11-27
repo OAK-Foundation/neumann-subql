@@ -41,11 +41,9 @@ class Wal2JSONListener {
 
   batchSize: number;
   running: boolean;
-  readonly client;
+  client: any;
 
-  constructor(client, {slotname, timeout, temporary, batchSize}: LogicalStreamOptions, walOptions: WalOptions) {
-    this.client = client;
-
+  constructor({slotname, timeout, temporary, batchSize}: LogicalStreamOptions, walOptions: WalOptions) {
     this.slotname = slotname;
     this.temporary = temporary || false;
 
@@ -62,6 +60,12 @@ class Wal2JSONListener {
     ];
 
     this.running = false;
+  }
+
+  withClient(client) {
+    this.client = client;
+
+    return this;
   }
 
   start() {

@@ -58,7 +58,6 @@ const shutdown = async () => {
 }
 
 const listener = new Wal2JSONListener(
-  getConn("listner"),
   {slotname: mixerSlot, temporary: false, timeout: 500, batchSize: 5,},
   {addTables: "*.extrinsics,*.events,*.blocks"}
 );
@@ -66,7 +65,7 @@ const listener = new Wal2JSONListener(
 const listen = async() => {
   // Now listen to the change
   console.log("listen to changes");
-  listener.start();
+  listener.withClient(await getConn("listner")).start();
 
   try {
     console.log("wait to next changes");
