@@ -2,6 +2,7 @@ import { ApiPromise, WsProvider } from "@polkadot/api";
 import client, {
   init as initDb,
   shutdown as shutdownDb,
+  getConn
 } from "./db";
 
 import {
@@ -57,7 +58,7 @@ const shutdown = async () => {
 }
 
 const listener = new Wal2JSONListener(
-  client,
+  getConn("listner"),
   {slotname: mixerSlot, temporary: false, timeout: 500, batchSize: 5,},
   {addTables: "*.extrinsics,*.events,*.blocks"}
 );

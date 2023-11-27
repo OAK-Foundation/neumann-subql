@@ -84,7 +84,7 @@ export const populateBlockMetadata = async(blockHash, blockId, api) => {
   return;
 }
 
-export const populateTask = async() => 
+export const populateTask = async() => {
   const query = `
     with data as (
     select
@@ -185,8 +185,9 @@ export const updateTaskMetric = async(taskId: String) => {
 
         'TaskExecuted',
         'TaskExecutionFailed'
-      ) and task_id = $1
-      
+      ) and task_id in $1
+
+      -- not necesarily but prepare to batch update mult task later. for now, we do one by one udpate.
       group by task_id 
     )
 
