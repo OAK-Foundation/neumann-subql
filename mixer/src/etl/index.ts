@@ -20,7 +20,7 @@ export interface ChangeRow {
 enum TaskStatus {
   Active    = 'active',
   Completed = 'completed',
-  Canceled  = 'canceled',
+  Canceled  = 'cancelled',
 }
 
 const TaskScheduledEvent = 'TaskScheduled', 
