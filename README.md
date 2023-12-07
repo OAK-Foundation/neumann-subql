@@ -129,3 +129,5 @@ query {
   }
 }
 ```
+
+# Local development

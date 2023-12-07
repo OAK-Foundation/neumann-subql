@@ -71,5 +71,8 @@ jobs:
           ssh -o UserKnownHostsFile=$HOME/.ssh/known_hosts \
             -i ~/.ssh/id_rsa \
             insights@${{ secrets.HOST }} '\
+              docker compose -f /etc/caddy/docker-compose.yml down; \
               cd ~/oak-subql && \
-              source secret.${{ inputs.target_env }} && make down up'
+              source secret.${{ inputs.target_env }} && \
+              make down up && \
+              docker compose -f /etc/caddy/docker-compose.yml up --force-recreate -d'

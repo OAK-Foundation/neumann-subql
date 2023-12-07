@@ -2,6 +2,7 @@ import { ApiPromise, WsProvider } from "@polkadot/api";
 import client, {
   init as initDb,
   shutdown as shutdownDb,
+  getConn
 } from "./db";
 
 import {
@@ -57,16 +58,17 @@ const shutdown = async () => {
 }
 
 const listener = new Wal2JSONListener(
-  client,
   {slotname: mixerSlot, temporary: false, timeout: 500, batchSize: 5,},
   {addTables: "*.extrinsics,*.events,*.blocks"}
 );
 
 const listen = async() => {
   // Now listen to the change
-  listener.start();
+  console.log("listen to changes");
+  listener.withClient(await getConn("listner")).start();
 
   try {
+    console.log("wait to next changes");
     for await (const change of listener.next()) {
       if (!change.data) {
         continue;

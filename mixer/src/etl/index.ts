@@ -1,7 +1,8 @@
 import client from "../db";
-
+import * as Sentry from '@sentry/node';
 
 const MAYBE_NEW_TASK = "new_task";
+const DEBUG = process.env["DEBUG"] == "1";
 
 export interface ChangeColumn {
   name: string;
@@ -16,6 +17,15 @@ export interface ChangeRow {
   columns: ChangeColumn[];
 }
 
+enum TaskStatus {
+  Active    = 'active',
+  Completed = 'completed',
+  Canceled  = 'cancelled',
+}
+
+const TaskScheduledEvent = 'TaskScheduled', 
+      TaskCanceledEvent  = 'TaskCancelled',
+      TaskCompletedEvent = 'TaskCompleted';
 
 export const processChange = async (doc: ChangeRow, api): Promise<void|string[]> => {
   if (doc.action != "I") {
@@ -32,9 +42,22 @@ export const processChange = async (doc: ChangeRow, api): Promise<void|string[]>
     if (doc.columns.some(a => a.name == "module" && a.value == "automationTime")) {
       const rawData = doc.columns.find(a => a.name == "data");
       const data = JSON.parse(rawData?.value || '{}');
-      console.log("change doc: ", doc, data);
+      console.log("automationTime event", data);
       if (data?.taskId) {
-        await populateTask();
+        if (doc.columns.some(a => a.name == "method" && a.value == TaskScheduledEvent)) {
+          // TODO: This query isn't efficent enough, it doesn't track last populate. 
+          await populateTask();
+        }
+        if (doc.columns.some(a => a.name == "method" && a.value == TaskCompletedEvent)) {
+          await updateTaskStatus(TaskStatus.Completed);
+        }
+        if (doc.columns.some(a => a.name == "method" && a.value == TaskCanceledEvent)) {
+          await updateTaskStatus(TaskStatus.Canceled);
+        }
+
+        if (doc.columns.some(a => a.name == "method" && ["TaskExecuted", "TaskExecutionFailed"].includes(a.value))) {
+          await updateTaskMetric(data.taskId);
+        }
       }
     }
   }
@@ -62,7 +85,7 @@ export const populateBlockMetadata = async(blockHash, blockId, api) => {
 }
 
 export const populateTask = async() => {
-  const taskHeight = await client.query(`
+  const query = `
     with data as (
     select
         events.id as event_id,
@@ -89,14 +112,95 @@ export const populateTask = async() => {
 
     insert into tasks (
         id, block_height, event_id, extrinsic_id, timestamp,
-        creator_id,
+        creator_id, status,
         _id, _block_range)
     select
         d.task_id, d.block_height, d.event_id, d.extrinsic_id, d.timestamp,
-        d.task_creator_id,
+        -- when task first scheduled, it's in actived status
+        d.task_creator_id, 'active' as status,
         to_uuid(d.task_id), int8range(d.block_height::int8, null)
     from data as d
     on conflict do nothing;
-  `);
+  `;
 
+  try {
+    await client.query(query,[TaskStatus.Active]);
+  } catch (e) {
+    console.log("error when populating task", e, query)
+    Sentry.captureException(e);
+  }
+}
+
+export const updateTaskStatus = async(status: TaskStatus) => {
+  let method: string = TaskCompletedEvent;
+
+  if (status == TaskStatus.Canceled) {
+    method = TaskCanceledEvent;
+  };
+  
+  const query = `
+    with filter_tasks as (
+        select 
+          event_id, task_id, method, timestamp as event_at
+        from task_events
+        inner join tasks on tasks.id=task_events.task_id and tasks.status !=30
+        where module = 'automationTime' and method = $1
+    )
+    update tasks 
+        set status = $2
+            completed_at = c.event_at
+    from filter_tasks as c
+    where c.task_id = tasks.id and (status is null or status != $2)
+  `;
+
+  try {
+    await client.query(query, [method, status]);
+  } catch (e) {
+    console.log("error when updating task status", e, query)
+    Sentry.captureException(e);
+  }
+}
+
+export const updateTaskMetric = async(taskId: String) => {
+  const query = `
+    with task_run as (
+      select 
+       count(*) as occurence,
+       task_id 
+      from task_events 
+      
+      where method in(
+        -- old native transfer event when run, 
+        'SuccessfullyTransferredFunds', 'TransferFailed', 
+        -- old xcmp 
+        'XcmpTaskSucceeded', 'XcmpTaskFailed',
+
+        -- auto compounted task
+        'SuccesfullyAutoCompoundedDelegatorStake',
+        'AutoCompoundDelegatorStakeFailed',
+
+        -- old dynamic dispatch
+        'DynamicDispatchResult',
+        'CallCannotBeDecoded',
+
+        'TaskExecuted',
+        'TaskExecutionFailed'
+      ) and task_id = $1
+
+      -- not necesarily but prepare to batch update mult task later. for now, we do one by one udpate.
+      group by task_id 
+    )
+
+    update tasks
+    set executed_count=r.occurence
+    from task_run as r
+    where tasks.id = r.task_id
+  `;
+
+  try {
+    await client.query(query, [taskId]);
+  } catch (e) {
+    console.log("error when updating task metric", e, query)
+    Sentry.captureException(e);
+  }
 }

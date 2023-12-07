@@ -148,7 +148,16 @@ type Task @entity {
   event: Event!
   extrinsic: Extrinsic
   timestamp: Date!
-  status: String
+  status: String @index
+  completed_at: Date
+  cancelled_at : Date
+
+  # The are the desire parameter that user set, for Recurring tasks, scheduled_end_at is unknow
+  scheduled_start_at: Date
+  scheduled_end_at: Date
+
+  executed_count: BigInt!
+
   creator: Account!
 }
 
