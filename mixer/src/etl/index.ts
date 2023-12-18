@@ -38,6 +38,7 @@ export const processChange = async (doc: ChangeRow, api): Promise<void|string[]>
   }
 
   const changes = new Set<string>();
+
   if (doc.table == "events") {
     if (doc.columns.some(a => a.name == "module" && a.value == "automationTime")) {
       const rawData = doc.columns.find(a => a.name == "data");
@@ -66,6 +67,14 @@ export const processChange = async (doc: ChangeRow, api): Promise<void|string[]>
     const blockHash = doc.columns.find(c => c.name == "hash")?.value;
     const blockId = doc.columns.find(c => c.name == "id")?.value
     await populateBlockMetadata(blockHash, blockId, api)
+
+    // task need to be populated first
+    await populateTask();
+    // Now we can update the status and metrics
+    await Promise.all([
+        updateTaskStatus(TaskStatus.Completed),
+        updateTaskStatus(TaskStatus.Canceled),
+    ]);
   }
 
   return Array.from(changes);
@@ -124,7 +133,7 @@ export const populateTask = async() => {
   `;
 
   try {
-    await client.query(query,[TaskStatus.Active]);
+    await client.query(query);
   } catch (e) {
     console.log("error when populating task", e, query)
     Sentry.captureException(e);
