@@ -197,7 +197,7 @@ export const updateTaskMetric = async(taskId: String) => {
 
         'TaskExecuted',
         'TaskExecutionFailed'
-      ) -- and task_id = $1
+      ) and task_id = $1
 
       -- not necesarily but prepare to batch update mult task later. for now, we do one by one udpate.
       group by task_id 
