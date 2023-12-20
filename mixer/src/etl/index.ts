@@ -156,7 +156,7 @@ export const updateTaskStatus = async(status: TaskStatus) => {
         where module = 'automationTime' and method = $1
     )
     update tasks 
-        set status = $2
+        set status = $2,
             completed_at = c.event_at
     from filter_tasks as c
     where c.task_id = tasks.id and (status is null or status != $2)
