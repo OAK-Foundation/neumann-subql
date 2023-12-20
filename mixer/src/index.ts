@@ -75,6 +75,7 @@ const listen = async() => {
       }
 
       const row = JSON.parse(change.data);
+
       await processChange(row, api);
     }
   } catch (e) {

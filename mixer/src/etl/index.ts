@@ -38,6 +38,7 @@ export const processChange = async (doc: ChangeRow, api): Promise<void|string[]>
   }
 
   const changes = new Set<string>();
+
   if (doc.table == "events") {
     if (doc.columns.some(a => a.name == "module" && a.value == "automationTime")) {
       const rawData = doc.columns.find(a => a.name == "data");
@@ -66,6 +67,14 @@ export const processChange = async (doc: ChangeRow, api): Promise<void|string[]>
     const blockHash = doc.columns.find(c => c.name == "hash")?.value;
     const blockId = doc.columns.find(c => c.name == "id")?.value
     await populateBlockMetadata(blockHash, blockId, api)
+
+    // task need to be populated first
+    await populateTask();
+    // Now we can update the status and metrics
+    await Promise.all([
+        updateTaskStatus(TaskStatus.Completed),
+        updateTaskStatus(TaskStatus.Canceled),
+    ]);
   }
 
   return Array.from(changes);
@@ -124,7 +133,7 @@ export const populateTask = async() => {
   `;
 
   try {
-    await client.query(query,[TaskStatus.Active]);
+    await client.query(query);
   } catch (e) {
     console.log("error when populating task", e, query)
     Sentry.captureException(e);
@@ -134,21 +143,24 @@ export const populateTask = async() => {
 export const updateTaskStatus = async(status: TaskStatus) => {
   let method: string = TaskCompletedEvent;
 
+  let flagColumn = 'completed_at';
   if (status == TaskStatus.Canceled) {
     method = TaskCanceledEvent;
+    flagColumn = 'canceled_at';
   };
+
   
   const query = `
     with filter_tasks as (
         select 
-          event_id, task_id, method, timestamp as event_at
+          task_events.event_id, task_events.task_id, task_events.method, task_events.timestamp as event_at
         from task_events
-        inner join tasks on tasks.id=task_events.task_id and tasks.status !=30
+        inner join tasks on tasks.id=task_events.task_id and (tasks.status is null or tasks.status != $2)
         where module = 'automationTime' and method = $1
     )
     update tasks 
-        set status = $2
-            completed_at = c.event_at
+        set status = $2,
+            ${flagColumn} = c.event_at
     from filter_tasks as c
     where c.task_id = tasks.id and (status is null or status != $2)
   `;
