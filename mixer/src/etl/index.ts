@@ -143,21 +143,24 @@ export const populateTask = async() => {
 export const updateTaskStatus = async(status: TaskStatus) => {
   let method: string = TaskCompletedEvent;
 
+  let flagColumn = 'completed_at';
   if (status == TaskStatus.Canceled) {
     method = TaskCanceledEvent;
+    flagColumn = 'canceled_at';
   };
+
   
   const query = `
     with filter_tasks as (
         select 
           event_id, task_id, method, timestamp as event_at
         from task_events
-        inner join tasks on tasks.id=task_events.task_id and tasks.status !=30
+        inner join tasks on tasks.id=task_events.task_id and (tasks.status is null or task.status != $2)
         where module = 'automationTime' and method = $1
     )
     update tasks 
         set status = $2,
-            completed_at = c.event_at
+            ${flagColumn} = c.event_at
     from filter_tasks as c
     where c.task_id = tasks.id and (status is null or status != $2)
   `;
@@ -194,7 +197,7 @@ export const updateTaskMetric = async(taskId: String) => {
 
         'TaskExecuted',
         'TaskExecutionFailed'
-      ) and task_id = $1
+      ) -- and task_id = $1
 
       -- not necesarily but prepare to batch update mult task later. for now, we do one by one udpate.
       group by task_id 
