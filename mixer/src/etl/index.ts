@@ -153,7 +153,7 @@ export const updateTaskStatus = async(status: TaskStatus) => {
   const query = `
     with filter_tasks as (
         select 
-          event_id, task_id, method, timestamp as event_at
+          task_events.event_id, task_events.task_id, task_events.method, task_events.timestamp as event_at
         from task_events
         inner join tasks on tasks.id=task_events.task_id and (tasks.status is null or tasks.status != $2)
         where module = 'automationTime' and method = $1
