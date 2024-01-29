@@ -18,7 +18,8 @@ schema:
 network:
   endpoint: 'wss://rpc.turing-staging.oak.tech'
   chainId: '0xd54f0988402deb4548538626ce37e4a318441ea0529ca369400ebec4e04dfe4b'
-  #dictionary: "https://api.subquery.network/sq/subquery/kusama-dictionary"
+
+  dictionary: "https://api.subquery.network/sq/subquery/kusama-dictionary"
   chaintypes:
     file: ./dist/chaintypes.js
 
