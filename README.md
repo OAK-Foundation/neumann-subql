@@ -131,3 +131,24 @@ query {
 ```
 
 # Local development
+
+# Re-indexing
+
+When changing code we would need to re-index follow this process.
+
+1. Stop the existing index process
+
+2. Reset the state
+
+```
+subql-node reindex -f ./ --db-schema=turing --targetHeight=the-block-to-start-the-reindex --log-level=trace
+```
+
+After running this, the metadata and pointer will be reset to the `targetHeight`
+all data higher than or equal to that block height is delete and we are ready to
+resume the index process
+
+3. Resume the index process
+
+We write code in an idempotent way so we will be able to restart from that
+height
