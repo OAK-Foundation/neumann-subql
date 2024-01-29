@@ -13,6 +13,7 @@ export const migrate = async () => {
     client.query('alter table turing.tasks  add column if not exists scheduled_start_at timestamp'),
     client.query('alter table turing.tasks  add column if not exists scheduled_end_at timestamp'),
     client.query('alter table turing.tasks  add column if not exists executed_count integer default(0)'),
+    client.query('alter table turing.tasks  alter column executed_count set default(0)'),
   ])
 
   // column need to be create before commit

@@ -115,13 +115,21 @@ export async function findOrCreateEvent(substrateEvent: SubstrateEvent): Promise
   const blockHeight = block.block.header.number;
 
   let callId = null;
+
   if (typeof extrinsic !== 'undefined') {
     const { section: extrinsicModule, method: extrinsicMethod } = extrinsic.extrinsic.method;
 
     // Skip indexing events for mandatory system extrinsics
-    if ((extrinsicModule === 'parachainSystem' && extrinsicMethod === 'setValidationData') ||
-      (extrinsicModule === 'timestamp' && extrinsicMethod === 'set')) {
+    if (extrinsicModule === 'timestamp' && extrinsicMethod === 'set') {
       return;
+    }
+
+    if (extrinsicModule === 'parachainSystem' && extrinsicMethod === 'setValidationData') {
+        if ((event.section !== 'automationTime') && (event.section !== 'xcmpQueue')) {
+            // we want to track anything related to our time/price automation,
+            // adn xcmp so we can cross check the schedule from other chain
+            return;
+        }
     }
 
     callId = canonicalExtrinsicID(extrinsic);

@@ -114,8 +114,11 @@ export const populateTask = async() => {
     inner join events on extrinsics.id = events.extrinsic_id
     where events.data->>'taskId' is not null
             and events.method = 'TaskScheduled'
-            and extrinsics.module = 'automationTime'
-            and extrinsics.method  like 'schedule%'
+            and (
+                (extrinsics.module = 'automationTime' and extrinsics.method  like 'schedule%')
+                -- this is XCM task
+                or (extrinsics.module = 'parachainSystem' and extrinsics.method = 'setValidationData')
+            )
     order by events.block_height asc, idx asc
     )
 
