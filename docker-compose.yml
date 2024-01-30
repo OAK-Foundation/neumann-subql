@@ -27,7 +27,8 @@ services:
     networks:
       - oak-subql
 
-  subquery-canary:
+  # Canary node can be used to backfill data or rebuild index
+  subquery-canary-node:
     <<: *subquery-node
     entrypoint:
     - sleep
