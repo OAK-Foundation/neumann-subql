@@ -14,8 +14,6 @@ services:
       DB_PORT: 5432
     volumes:
       - ./:/app
-    # entrypoint: [ "sleep" ]
-    # command: ["infinity" ]
     command:
       - -f=/app
       - --db-schema=turing
