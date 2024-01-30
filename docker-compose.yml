@@ -12,8 +12,6 @@ services:
       DB_DATABASE: ${DB_DATABASE:-postgres}
       DB_HOST: ${DB_HOST:-postgres}
       DB_PORT: 5432
-      CHAIN_ID:
-      RPC_ADDRESS:
     volumes:
       - ./:/app
     entrypoint: [ "sleep" ]
