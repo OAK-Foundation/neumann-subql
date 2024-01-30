@@ -1,7 +1,7 @@
 version: "3.9"
 
 services:
-  subquery-node:
+  subquery-node: &subquery-node
     image: onfinality/subql-node:v3.5.0
     depends_on:
       - postgres
@@ -26,6 +26,12 @@ services:
       retries: 10
     networks:
       - oak-subql
+
+  subquery-canary:
+    <<: *subquery-node
+    entrypoint:
+    - sleep
+    command: "infinity"
 
   mixer:
     build:
