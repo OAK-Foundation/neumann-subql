@@ -1,8 +1,8 @@
 version: "3.9"
 
 services:
-  subquery-node:
-    image: onfinality/subql-node:v2.5.1
+  subquery-node: &subquery-node
+    image: onfinality/subql-node:v3.5.0
     depends_on:
       - postgres
     restart: always
@@ -26,6 +26,14 @@ services:
       retries: 10
     networks:
       - oak-subql
+
+  # Canary node can be used to backfill data or rebuild index
+  subquery-canary-node:
+    <<: *subquery-node
+    entrypoint:
+    - sleep
+    command: "infinity"
+    healthcheck: {}
 
   mixer:
     build:
