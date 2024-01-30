@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   subquery-node:
-    image: onfinality/subql-node:v2.5.1
+    image: onfinality/subql-node:v3.5.1
     depends_on:
       - postgres
     restart: always
@@ -12,6 +12,8 @@ services:
       DB_DATABASE: ${DB_DATABASE:-postgres}
       DB_HOST: ${DB_HOST:-postgres}
       DB_PORT: 5432
+      CHAIN_ID:
+      RPC_ADDRESS:
     volumes:
       - ./:/app
     entrypoint: [ "sleep" ]

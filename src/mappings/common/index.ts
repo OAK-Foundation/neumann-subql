@@ -2,7 +2,6 @@ import {
   SubstrateBlock,
   SubstrateExtrinsic,
   SubstrateEvent,
-  Entity
 } from "@subql/types";
 
 import type { DispatchInfo } from "@polkadot/types/interfaces";
@@ -96,15 +95,17 @@ export function composeEvent(substrateEvent: SubstrateEvent): Event {
   const blockId = canonicalBlockID(block);
   const eventId = canonicalEventID(substrateEvent);
 
-  const record = new Event(eventId);
-  record.blockHeight = blockHeight.toBigInt()
-  record.idx = idx
-  record.module = event.section
-  record.method = event.method
+  const record = new Event(
+      eventId,
+      blockHeight.toBigInt(),
+      idx,
+      event.section,
+      event.method,
+      event.data.meta.docs.join(" "),
+      block.timestamp
+  )
   record.data = event.data.toHuman() as Args
-  record.docs = event.data.meta.docs.join(" ")
   record.extrinsicId = callId
-  record.timestamp = block.timestamp
   record.blockId = blockId
 
   return record;
@@ -157,15 +158,17 @@ export async function findOrCreateEvent(substrateEvent: SubstrateEvent): Promise
 
     if (data.taskId) {
       // break down the task 
-      const ta = new TaskEvent(record.id);
-      ta.blockHeight = blockHeight.toBigInt();
-      ta.idx = idx;
-      ta.module = event.section;
-      ta.method = event.method;
-      ta.eventId = record.id;
+      const ta = new TaskEvent(
+        record.id,
+        blockHeight.toBigInt(),
+        idx,
+        event.section,
+        event.method,
+        record.id,
+        data["taskId"],
+        block.timestamp
+      );
       ta.extrinsicId = callId;
-      ta.timestamp = block.timestamp;
-      ta.taskId = data["taskId"];
       promises.push(store.set(`TaskEvent`, ta.id, ta));
     }
   }
@@ -188,16 +191,19 @@ export function composeExtrinsic(substrateExtrinsic: SubstrateExtrinsic): Extrin
   =============
   `);
 
-  const record = new Extrinsic(id);
-  record.blockHeight = blockHeight.toBigInt()
-  record.idx = idx
-  record.module = extrinsic.method.section
-  record.method = extrinsic.method.method
-  record.success = substrateExtrinsic.success
+  const record = new Extrinsic(
+    id,
+    blockHeight.toBigInt(),
+    idx,
+    extrinsic.method.section,
+    extrinsic.method.method,
+    substrateExtrinsic.success,
+    block.timestamp,
+    extrinsic.hash.toString()
+  );
+
   record.args = args
-  record.timestamp = block.timestamp
   record.fromAccountId = extrinsic.signer.toString()
-  record.txHash = extrinsic.hash.toString();
 
   return record;
 }
@@ -358,10 +364,13 @@ export const handleTransfer = async (
   logger.info(`New Transfer happened!: ${JSON.stringify(event)}`);
 
   // Create the new transfer entity
-  const transfer = new Transfer(`${blockNum}-${index}`);
+  const transfer = new Transfer(
+    `${blockNum}-${index}`,
+    to,
+    from
+  );
+
   transfer.blockNumber = blockNum;
-  transfer.fromAccountId = from;
-  transfer.toAccountId = to;
   transfer.balanceChange = BigInt(balanceChange);
   transfer.timestamp = block.timestamp;
 
@@ -389,8 +398,10 @@ export const handleBalanceSet = async (
   logger.info(`BalanceSet happened!: ${JSON.stringify(event)}`);
 
   // Create the new BalanceSet entity
-  const balanceSet = new BalanceSet(`${blockNum}-${index}`);
-  balanceSet.accountId = accountToSet;
+  const balanceSet = new BalanceSet(
+    `${blockNum}-${index}`,
+    accountToSet
+  );
   balanceSet.blockNumber = blockNum;
   balanceSet.balanceChange = BigInt(balance1) + BigInt(balance2);
   balanceSet.timestamp = block.timestamp;
@@ -414,8 +425,11 @@ export const handleDeposit = async (
   logger.info(`Deposit happened!: ${JSON.stringify(event)}`);
 
   // Create the new Deposit entity
-  const deposit = new Deposit(`${blockNum}-${index}`);
-  deposit.accountId = accountToSet;
+  const deposit = new Deposit(
+    `${blockNum}-${index}`,
+    accountToSet
+  );
+
   deposit.blockNumber = blockNum;
   deposit.balanceChange = BigInt(balance);
   deposit.timestamp = block.timestamp;
@@ -439,8 +453,11 @@ export const handleReserved = async (
   logger.info(`Reserved happened!: ${JSON.stringify(event)}`);
 
   // Create the new Reserved entity
-  const reserved = new Reserved(`${blockNum}-${index}`);
-  reserved.accountId = accountToSet;
+  const reserved = new Reserved(
+    `${blockNum}-${index}`,
+    accountToSet
+  );
+
   reserved.blockNumber = blockNum;
   reserved.balanceChange = BigInt(balance);
   reserved.timestamp = block.timestamp;
@@ -465,8 +482,11 @@ export const handleUnreserved = async (
   logger.info(`Unreserved happened!: ${JSON.stringify(event)}`);
 
   // Create the new Reserved entity
-  const unreserved = new Unreserved(`${blockNum}-${index}`);
-  unreserved.accountId = accountToSet;
+  const unreserved = new Unreserved(
+    `${blockNum}-${index}`,
+    accountToSet
+  );
+
   unreserved.blockNumber = blockNum;
   unreserved.balanceChange = BigInt(balance);
   unreserved.timestamp = block.timestamp;
@@ -491,8 +511,11 @@ export const handleWithdraw = async (
   logger.info(`Withdraw happened!: ${JSON.stringify(event)}`);
 
   // Create the new Withdraw entity
-  const withdraw = new Withdraw(`${blockNum}-${index}`);
-  withdraw.accountId = accountToSet;
+  const withdraw = new Withdraw(
+    `${blockNum}-${index}`,
+    accountToSet
+  );
+
   withdraw.blockNumber = blockNum;
   withdraw.balanceChange = BigInt(balance);
   withdraw.timestamp = block.timestamp;
@@ -520,8 +543,10 @@ export const handleSlash = async (
   logger.info(`Slash happened!: ${JSON.stringify(event)}`);
 
   // Create the new Withdraw entity
-  const slash = new Slash(`${blockNum}-${index}`);
-  slash.accountId = accountToSet;
+  const slash = new Slash(
+    `${blockNum}-${index}`,
+    accountToSet,
+  );
   slash.blockNumber = blockNum;
   slash.balanceChange = BigInt(balance);
   slash.timestamp = block.timestamp;
@@ -560,10 +585,12 @@ export const handleReservRepatriated = async (
   //ensure that our account entities exist
 
   // Create the new Reserved entity
-  const reservRepatriated = new ReservRepatriated(`${blockNum}-${index}`);
+  const reservRepatriated = new ReservRepatriated(
+    `${blockNum}-${index}`,
+    receiver,
+    sender
+  );
 
-  reservRepatriated.fromAccountId = sender;
-  reservRepatriated.toAccountId = receiver;
   reservRepatriated.blockNumber = blockNum;
   reservRepatriated.balanceChange = BigInt(balance);
   reservRepatriated.timestamp = block.timestamp;
